@@ -10,8 +10,9 @@ import UIKit
 
 class PlaylistViewController: UITableViewController, PlaylistCellDelegate {
     
+    var idSongToAdd:String = ""
     var party_id:String = ""
-    var array: [String: Any] = [:]
+    var array : NSMutableArray = []
     
     var songs = [(song: "Despacito", artist: "Luis Fonsi", id: "obcowbdeub", votes: 0)]
 
@@ -20,9 +21,37 @@ class PlaylistViewController: UITableViewController, PlaylistCellDelegate {
     
     override func viewDidLoad() {
         super.viewDidLoad()
+        var urlSet = URL(string: "https://crowdbeats-host.herokuapp.com/setplaylist?id=7gJ4LIPzSOgDQgbsnEz9GX");
+        
+        if(idSongToAdd != "") {
+            print(idSongToAdd)
+            var comp = URLComponents(string: "https://crowdbeats-host.herokuapp.com/addsong")
+            
+            //comp!.queryItems = [URLQueryItem(name: "party_id", value: party_id), URLQueryItem(name: "song_uri", value: idSongToAdd)]
+            comp!.queryItems = [URLQueryItem(name:"id", value: idSongToAdd)]
+            
+            let url : URL = comp!.url!
+            let task = URLSession.shared.dataTask(with: url) { (data, response, error) in
+                guard let dataResponse = data,
+                    error == nil else {
+                        print(error?.localizedDescription ?? "Response Error")
+                        return }
+                do {
+                    print("WOW")
+                    //here dataResponse received from a network request
+                    let jsonResponse = try JSONSerialization.jsonObject(with:
+                        dataResponse, options: [])
+                    print(jsonResponse)
+                    
+                } catch let parsingError {
+                    
+                    print("Error", parsingError)
+                }
+            }
+            task.resume()
+        }
         songs = []
         
-        print(party_id)
         let myurl = "https://crowdbeats-host.herokuapp.com/playlist"
         
         
@@ -41,6 +70,7 @@ class PlaylistViewController: UITableViewController, PlaylistCellDelegate {
                 // Create Blog Object
                 guard let ID: String = (jsonArray[i] as AnyObject).object(forKey: "id") as? String,
                     let Name: String = (jsonArray[i] as AnyObject).object(forKey: "name") as? String,
+                    let Artist: String = (jsonArray[i] as AnyObject).object(forKey: "artist") as? String,
                     let votes: Int = (jsonArray[i] as AnyObject).object(forKey: "votes") as? Int
                     else {
                         print("Error")
@@ -48,8 +78,11 @@ class PlaylistViewController: UITableViewController, PlaylistCellDelegate {
                     }
                 
                 // Add Blog Objects to mainArray
-                songs.append((song: Name, artist: "", id: ID, votes: votes))
+                songs.append((song: Name, artist: Artist, id: ID, votes: votes))
             }
+            
+            
+            
         }
         catch {
             print("Error: (Retrieving Data)")
@@ -57,8 +90,7 @@ class PlaylistViewController: UITableViewController, PlaylistCellDelegate {
         songs = songs.sorted(by: {$0.votes > $1.votes})
         tableView.reloadData()
     }
-        // Uncomment the following line to preserve selection between presentations
-        // self.clearsSelectionOnViewWillAppear = false
+    
 
     private func search(search: String) {
         
@@ -85,25 +117,24 @@ class PlaylistViewController: UITableViewController, PlaylistCellDelegate {
                     dataResponse, options: [])
                 print(4)
                 print(jsonResponse) //Response result
-                //                print(jsonResponse)
-                var array = jsonResponse as? [String: Any]
+                self.array = ((jsonResponse as AnyObject).mutableCopy() as? NSMutableArray)!
                 
                 DispatchQueue.main.async {
                     self.performSegue(withIdentifier: "toSearch", sender: nil)
                 }
                 
             } catch let parsingError {
-//                print(30)
+
                 print("Error", parsingError)
             }
-//            print(20)
+
             
             DispatchQueue.main.async {
                 self.performSegue(withIdentifier: "toSearch", sender: nil)
             }
         }
         task.resume()
-//        print(array)
+
     }
     
     func didPressButton(_ sender: PlaylistCell) {
